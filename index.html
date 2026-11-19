@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ボールを速く投げたら？</title>
+<style>
+  :root{--ink:#fff;--panel:rgba(12,20,48,.86);--accent:#ffb02e;--green:#5df08a;--pink:#ff6b81}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#050a1e;overflow:hidden;color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+    -webkit-user-select:none;user-select:none;touch-action:manipulation}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #top{position:fixed;left:0;right:0;top:0;padding:max(10px,env(safe-area-inset-top)) 14px 0;pointer-events:none}
+  h1{font-size:clamp(17px,3.2vw,26px);margin:0 0 8px;text-shadow:0 2px 8px #000}
+  #msg{background:rgba(255,255,255,.96);color:#1b2a4e;border-radius:18px;padding:10px 14px;
+    font-size:clamp(14px,2.5vw,19px);line-height:1.55;max-width:min(720px,100%);
+    display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  #mface{font-size:clamp(26px,5vw,36px);flex:none}
+  #msg b{color:#d9480f}
+  #badge{position:fixed;right:14px;top:max(10px,env(safe-area-inset-top));background:var(--accent);color:#3a2500;
+    font-weight:700;border-radius:999px;padding:8px 16px;font-size:clamp(14px,2.6vw,20px);display:none;
+    box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  #badge.pop{animation:pop .5s}
+  @keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+  #zoomBox{position:fixed;right:12px;top:42%;display:flex;flex-direction:column;gap:8px}
+  #zoomBox button{width:44px;height:44px;padding:0;font-size:22px;background:rgba(255,255,255,.2);backdrop-filter:blur(6px)}
+  #viewBox{position:fixed;left:10px;top:36%;display:flex;flex-direction:column;gap:6px}
+  #viewBox button{padding:8px 12px;font-size:clamp(12px,2.2vw,15px);background:rgba(255,255,255,.2);backdrop-filter:blur(6px)}
+  canvas{touch-action:none;cursor:grab}
+  #hint{font-size:clamp(11px,2vw,13px);opacity:.8;margin-top:6px;text-shadow:0 1px 4px #000}
+  #panel{position:fixed;left:50%;transform:translateX(-50%);bottom:max(10px,env(safe-area-inset-bottom));
+    width:min(780px,calc(100% - 20px));background:var(--panel);backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);border-radius:22px;padding:12px 16px 14px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .read{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .big{font-size:clamp(16px,3vw,22px)}
+  .big b{font-size:clamp(28px,6vw,42px);color:var(--accent);font-variant-numeric:tabular-nums}
+  .sub{font-size:clamp(11px,2vw,14px);opacity:.85;text-align:right}
+  .sub b{color:#9fd8ff}
+  .sl{position:relative;padding:6px 0 26px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:9px;margin:10px 0 0;outline:none;
+    background:linear-gradient(90deg,#4aa3ff 0%,#4aa3ff 65.8%,#5df08a 65.8%,#5df08a 93.3%,#ff9a3c 93.3%,#ff5d73 100%)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:34px;height:34px;border-radius:50%;background:#fff;
+    border:5px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#fff;border:5px solid var(--accent)}
+  .mk{position:absolute;top:34px;font-size:clamp(10px,1.9vw,13px);transform:translateX(-50%);white-space:nowrap;opacity:.9}
+  .mk::before{content:"";position:absolute;left:50%;top:-8px;width:2px;height:7px;background:#fff;opacity:.7}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;color:inherit;border:0;cursor:pointer;border-radius:999px;padding:9px 14px;
+    background:rgba(255,255,255,.16);font-size:clamp(13px,2.3vw,16px)}
+  button:active{transform:scale(.95)}
+  button.chip{background:rgba(255,255,255,.14)}
+  button.chip:hover{background:rgba(255,255,255,.26)}
+  #go{background:linear-gradient(180deg,#ffc24a,#ff8a1f);color:#4a2400;font-weight:800;
+    font-size:clamp(17px,3.4vw,22px);padding:11px 26px;box-shadow:0 4px 0 #b85a00}
+  #go:active{box-shadow:0 1px 0 #b85a00;transform:translateY(3px)}
+  .sp{flex:1}
+  .on{background:#fff!important;color:#1b2a4e}
+  #why{position:fixed;inset:0;background:rgba(3,6,20,.7);display:none;align-items:center;justify-content:center;padding:16px}
+  #why.show{display:flex}
+  #why .card{background:#fff;color:#1b2a4e;border-radius:24px;max-width:560px;width:100%;padding:20px 22px;
+    font-size:clamp(15px,2.8vw,19px);line-height:1.7;max-height:90vh;overflow:auto}
+  #why h2{margin:0 0 6px;font-size:1.2em}
+  #why ol{margin:6px 0 12px;padding-left:1.4em}
+  #why li{margin-bottom:8px}
+  #why .close{background:#1b2a4e;color:#fff;display:block;margin:6px auto 0}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <h1>🌍 ボールを速く投げたらどうなる？</h1>
+  <div id="msg"><span id="mface">🐥</span><span id="mtxt"></span></div>
+  <div id="hint">👆 ドラッグで見る向きを変えられるよ（横や上からも！）・指を開く／閉じるで拡大・縮小 ・ ✋で移動 ・ ⌖でもとにもどす</div>
+</div>
+<div id="badge"></div>
+<div id="zoomBox">
+  <button id="zin" aria-label="おおきく">＋</button>
+  <button id="zout" aria-label="ちいさく">－</button>
+  <button id="zreset" aria-label="もとにもどす">⌖</button>
+  <button id="zpan" aria-label="いどうモード">✋</button>
+</div>
+<div id="viewBox">
+  <button id="vFront">正面から</button>
+  <button id="vDiag">ななめから</button>
+  <button id="vSide">横から</button>
+  <button id="vTop">上から</button>
+</div>
+
+<div id="panel">
+  <div class="read">
+    <div class="big">1秒で <b id="kms">7.9</b> キロメートル</div>
+    <div class="sub">新幹線の<b id="shin">95</b>倍 ・ 1時間で<b id="jisoku">28,440</b>キロ</div>
+  </div>
+  <div class="sl">
+    <input id="speed" type="range" min="0" max="12" step="0.1" value="5" aria-label="投げる速さ">
+    <span class="mk" style="left:calc(17px + (100% - 34px) * 0.658)">7.9<br>一周する</span>
+    <span class="mk" style="left:calc(17px + (100% - 34px) * 0.933)">11.2<br>飛び出す</span>
+  </div>
+  <div class="row" id="chips"></div>
+  <div class="row" style="margin-top:10px">
+    <button id="go">🔥 投げる！</button>
+    <button id="again">↺ もう一度</button>
+    <span class="sp"></span>
+    <button id="tglPred" class="on">予想の線</button>
+    <button id="tglArrow" class="on">矢印</button>
+    <button id="tglSpd">⏱ ×1</button>
+    <button id="whyBtn">❓ どうして？</button>
+  </div>
+</div>
+
+<div id="why"><div class="card">
+  <h2>どうして地球のまわりを回り続けるの？</h2>
+  <ol>
+    <li>ボールは投げても、ずっと<b>地球に引っぱられて</b>落ちていくよ（赤い矢印）。</li>
+    <li><b>速く</b>投げるほど、落ちるまでの間に<b>前へ進む</b>ので、遠くに落ちるよ。</li>
+    <li>地球は<b>丸い</b>から、とても速いと、落ちても落ちても地面が遠ざかっていく！だからぶつからないんだ。</li>
+    <li>ちょうど<b>1秒に7.9キロ</b>だと、落ち続けながら地球をぐるぐる回るよ。宇宙ステーションも、こうして回っているんだ。</li>
+    <li>もっと速い<b>11.2キロ</b>以上だと、地球の引力をふり切って宇宙へ飛び出すよ。</li>
+  </ol>
+  <button class="close" id="whyClose">わかった！</button>
+</div></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const VC = 7.91;          // ちきゅうを ぐるっと まわる はやさ (km/s)
+const R_KM = 6371;
+const R0 = 1.03;          // 大砲の たかさ (ちきゅうの はんけい = 1)
+const PI2 = Math.PI * 2;
+let W = 0, H = 0, dpr = 1;
+
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- ほし ---------- */
+const stars = Array.from({length: 200}, () => ({x: Math.random(), y: Math.random(), r: Math.random()*1.3+.3, p: Math.random()*6.28}));
+
+/* ---------- りくち（だいたいの かたち） ----------
+   日本が いちばん うえ（大砲の いち）に くるように、アフリカ・アジアの ほうから 見た 地球 */
+const RAW = [
+ ['#62c35c', [[36,-9],[43,-9],[48,-4],[51,2],[54,8],[57,8],[55,14],[60,18],[66,24],[70,28],[71,40],[73,80],[77,105],[72,130],[69,170],[65,178],[60,163],[52,157],[60,150],[55,135],[48,140],[43,132],[39,127],[35,129],[38,121],[31,121],[22,114],[21,108],[12,109],[9,105],[13,100],[6,101],[1,104],[8,98],[16,97],[21,92],[22,89],[16,82],[8,77],[21,72],[25,66],[25,57],[23,59],[17,55],[12,44],[21,39],[28,34],[31,34],[36,36],[37,28],[40,26],[39,23],[40,19],[45,13],[44,8],[43,5],[37,-2]]],
+ ['#62c35c', [[35,-6],[37,10],[32,32],[22,37],[12,43],[11,51],[0,42],[-10,40],[-26,33],[-34,26],[-34,18],[-18,12],[-5,12],[5,9],[5,-5],[15,-17],[21,-17],[30,-10]]],
+ ['#62c35c', [[45,142],[41,142],[36,141],[34,136],[34,131],[36,133],[38,138],[41,140]]],
+ ['#62c35c', [[-11,131],[-12,142],[-19,147],[-28,153],[-38,148],[-35,137],[-32,125],[-35,117],[-22,114],[-15,124]]],
+ ['#62c35c', [[5,95],[2,99],[-6,106],[-5,102],[0,98]]],
+ ['#62c35c', [[7,117],[1,110],[-3,111],[-3,116],[1,119]]],
+ ['#62c35c', [[-6,106],[-8,114],[-9,111]]],
+ ['#62c35c', [[-2,131],[-3,141],[-9,147],[-8,138],[-4,133]]],
+ ['#62c35c', [[18,122],[10,126],[7,126],[14,120]]],
+ ['#62c35c', [[-12,49],[-25,47],[-24,44],[-16,44]]],
+ ['#f2f6fa', [[60,-45],[70,-22],[83,-30],[82,-60],[76,-70],[68,-53]]],
+ ['#f2f6fa', Array.from({length:19}, (_, i) => [-70, i*20])],
+];
+const D2R = Math.PI / 180;
+const vec = (la, lo) => [Math.cos(la*D2R)*Math.cos(lo*D2R), Math.cos(la*D2R)*Math.sin(lo*D2R), Math.sin(la*D2R)];
+const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+const VIEW_C0 = vec(0, 48), VIEW_U = vec(36, 138);   // まんなか=アフリカの よこ / うえ=日本
+const VIEW_R0 = [VIEW_U[1]*VIEW_C0[2]-VIEW_U[2]*VIEW_C0[1], VIEW_U[2]*VIEW_C0[0]-VIEW_U[0]*VIEW_C0[2], VIEW_U[0]*VIEW_C0[1]-VIEW_U[1]*VIEW_C0[0]];
+const lands = RAW.map(([color, ll]) => {
+  const vs = [];
+  for(let i = 0; i < ll.length; i++){
+    const A = ll[i], B = ll[(i+1) % ll.length];
+    let dlo = B[1] - A[1]; if(dlo > 180) dlo -= 360; if(dlo < -180) dlo += 360;
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(B[0]-A[0]), Math.abs(dlo)) / 3));
+    for(let j = 0; j < n; j++){
+      const p = vec(A[0] + (B[0]-A[0])*j/n, A[1] + dlo*j/n);
+      vs.push([dot(p, VIEW_R0), dot(p, VIEW_U), dot(p, VIEW_C0)]);   // x=みぎ y=うえ(日本) z=てまえ
+    }
+  }
+  return {color, vs};
+});
+
+/* ---------- 3Dの 見かた（ドラッグで かえる） ----------
+   ボールの とぶ 面は x-y 面。いつもは 正面（z方向）から 見ている。 */
+const view = {yaw: 0, pitch: 0}, viewT = {yaw: 0, pitch: 0};
+const MV = {ex: [1,0,0], ey: [0,1,0], ez: [0,0,1]};
+function updateMV(){
+  const c = Math.cos(view.yaw), s = Math.sin(view.yaw), ct = Math.cos(view.pitch), st = Math.sin(view.pitch);
+  MV.ex = [c, 0, s]; MV.ey = [st*s, ct, -st*c]; MV.ez = [-ct*s, st, ct*c];
+}
+const proj2 = (x, y) => [MV.ex[0]*x + MV.ex[1]*y, MV.ey[0]*x + MV.ey[1]*y, MV.ez[0]*x + MV.ez[1]*y];
+const dir2 = (x, y) => [MV.ex[0]*x + MV.ex[1]*y, MV.ey[0]*x + MV.ey[1]*y];
+const hiddenBack = q => q[2] < 0 && q[0]*q[0] + q[1]*q[1] < 1;   // ちきゅうの うらに かくれている？
+function projectLand(l){
+  const out = []; let prev = null, first = null, any = false;
+  const arc = (p, q) => {
+    const a0 = Math.atan2(p.y, p.x), d = wrap(Math.atan2(q.y, q.x) - a0), n = Math.ceil(Math.abs(d) / .1);
+    for(let j = 1; j < n; j++) out.push([Math.cos(a0 + d*j/n), Math.sin(a0 + d*j/n)]);
+  };
+  for(const w of l.vs){
+    let x = dot(w, MV.ex), y = dot(w, MV.ey);
+    const vis = dot(w, MV.ez) >= 0; if(vis) any = true;
+    if(!vis){ const m = Math.hypot(x, y) || 1; x /= m; y /= m; }
+    const q = {x, y, vis};
+    if(prev && !prev.vis && !vis) arc(prev, q);
+    out.push([x, y]); prev = q; if(!first) first = q;
+  }
+  if(prev && first && !prev.vis && !first.vis) arc(prev, first);
+  return any ? out : null;
+}
+function blobPath(pts){
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+}
+
+/* ---------- ぶつり ---------- */
+function acc(x, y){ const r2 = x*x + y*y, k = -1 / (r2 * Math.sqrt(r2)); return [x*k, y*k]; }
+function step(s, dt){
+  let [ax, ay] = acc(s.x, s.y);
+  s.vx += ax*dt/2; s.vy += ay*dt/2;
+  s.x += s.vx*dt; s.y += s.vy*dt;
+  [ax, ay] = acc(s.x, s.y);
+  s.vx += ax*dt/2; s.vy += ay*dt/2;
+}
+const wrap = d => { while(d > Math.PI) d -= PI2; while(d < -Math.PI) d += PI2; return d; };
+
+function preview(v){
+  const s = {x: 0, y: R0, vx: v, vy: 0}, pts = [[0, R0]];
+  let theta = 0, last = 0, landed = false;
+  for(let i = 0; i < 2600; i++){
+    step(s, 0.01);
+    const r = Math.hypot(s.x, s.y), a = Math.atan2(s.x, s.y);
+    theta += wrap(a - last); last = a;
+    if(r <= 1){ s.x /= r; s.y /= r; pts.push([s.x, s.y]); landed = true; break; }
+    if(r > 9) break;
+    if(i % 2 === 0) pts.push([s.x, s.y]);
+  }
+  const E = v*v/2 - 1/R0;
+  let kind, rp = 0, ra = 0;
+  if(v < 0.001) kind = 'drop';
+  else if(E >= 0) kind = 'escape';
+  else {
+    const a = -1 / (2*E);
+    if(v*v*R0 >= 1){ rp = R0; ra = 2*a - R0; } else { ra = R0; rp = 2*a - R0; }
+    kind = rp >= 1 ? (ra / rp < 1.12 ? 'circle' : 'ellipse') : 'land';
+  }
+  return {pts, landed, theta, kind, rp, ra};
+}
+
+/* ---------- じょうたい ---------- */
+let speed = 5, pv = preview(speed / VC);
+let sim = null;      // {x,y,vx,vy, mode, trail, total, laps, t, kind, shown}
+let puffs = [];
+let userZoom = 1, panX = 0, panY = 0;
+let timeScale = 1, showPred = true, showArrow = true;
+const cam = {cx: 0, cy: 1, ls: Math.log(300)}, camT = {cx: 0, cy: 1, ls: Math.log(300)};
+let V = {s: 300, vcx: 0, vcy: 0};
+
+function viewport(){
+  const t = $('top').getBoundingClientRect().bottom + 6;
+  const b = $('panel').getBoundingClientRect().top - 6;
+  return b - t < 150 ? {top: H*0.2, bot: H*0.7} : {top: t, bot: b};
+}
+function fitCamera(snap){
+  const vp = viewport(), vw = W, vh = vp.bot - vp.top;
+  let minx = -0.001, maxx = 0.001, miny = R0 - 0.001, maxy = R0 + 0.001;
+  const big = !(pv.kind === 'land' || pv.kind === 'drop') || pv.theta > 1.0;
+  for(const p of pv.pts){
+    if(Math.hypot(p[0], p[1]) > 4.2) continue;
+    minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]);
+    miny = Math.min(miny, p[1]); maxy = Math.max(maxy, p[1]);
+  }
+  let bw, bh;
+  if(big){
+    minx = Math.min(minx, -1); maxx = Math.max(maxx, 1); miny = Math.min(miny, -1); maxy = Math.max(maxy, 1.04);
+    bw = (maxx - minx) * 1.18; bh = (maxy - miny) * 1.18;
+  } else {
+    minx = Math.min(minx, -0.13); miny = Math.min(miny, 0.975);
+    bw = Math.max((maxx - minx) * 1.35, 0.34); bh = Math.max((maxy - miny) * 1.5, 0.2);
+  }
+  camT.cx = (minx + maxx) / 2; camT.cy = (miny + maxy) / 2;
+  camT.ls = Math.log(Math.min(vw / bw, vh / bh)) + Math.log(userZoom);
+  if(snap){ cam.cx = camT.cx; cam.cy = camT.cy; cam.ls = camT.ls; }
+}
+
+/* ---------- ひょうじ ---------- */
+function setMsg(face, html){ $('mface').textContent = face; $('mtxt').innerHTML = html; }
+const READY_MSG = '山の頂上の<b>大砲</b>からボールを打つよ！下のスライダーで<b>速さ</b>を選んで、<b>投げる！</b>をおしてね。';
+function updateReadout(){
+  $('kms').textContent = speed.toFixed(1);
+  $('shin').textContent = Math.round(speed * 12).toLocaleString('ja-JP');
+  $('jisoku').textContent = Math.round(speed * 3600).toLocaleString('ja-JP');
+}
+function setBadge(n){
+  const b = $('badge');
+  if(n <= 0){ b.style.display = 'none'; return; }
+  b.style.display = 'block'; b.textContent = '🌍 ぐるぐる ' + n + ' 回';
+  b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+}
+
+function resetSim(){
+  sim = null; puffs = []; setBadge(0);
+  setMsg('🐥', READY_MSG);
+}
+function onSpeedChange(){
+  speed = parseFloat($('speed').value);
+  pv = preview(speed / VC);
+  updateReadout(); fitCamera(false); resetSim();
+}
+function addPuffs(x, y, k, n, spread, dr){
+  for(let i = 0; i < n; i++) puffs.push({x: x + (Math.random()-.5)*spread, y: y + (Math.random()-.5)*spread*.4, t: -Math.random()*.15, k: k * (.6 + Math.random()*.8), dr: (dr || 0) * (.5 + Math.random())});
+}
+function throwBall(){
+  const v = speed / VC;
+  sim = {x: 0, y: R0, vx: v, vy: 0, mode: 'flying', trail: [[0, R0]], total: 0, laps: 0, t: 0,
+         prevA: 0, kind: pv.kind, shown: false};
+  puffs = []; setBadge(0);
+  const k = Math.max(0.03, 24 / V.s);
+  addPuffs(0.12*k, R0, 1, 7, 5 / V.s, 26);
+  if(pv.kind === 'escape') setMsg('🚀', '地球の引っぱる力を<b>ふり切った！</b>もうもどってこないよ。月やほかの星へ行くロケットの速さだよ。');
+  else if(pv.kind === 'drop') setMsg('🐥', '速さ0だと、前に進まないで、まっすぐ<b>下</b>に落ちるよ。');
+  else setMsg('🐥', 'ボールが飛んでいくよ…');
+}
+
+function landMessage(){
+  const km = Math.round(sim.theta * R_KM);
+  let t = `ドスーン！ボールは<b>${km.toLocaleString('ja-JP')}キロメートル</b>先に落ちたよ。`;
+  if(km >= 100) t += `（東京〜大阪の400キロの<b>${(km/400).toFixed(1)}倍</b>）`;
+  if(sim.theta >= Math.PI) t += ' 地球の反対側を過ぎた！あと少しで一周！';
+  else if(sim.theta >= Math.PI/2) t += ' 地球の4分の1以上も飛んだよ！';
+  else if(km < 5) t += ' もっと<b>速く</b>投げてみよう。';
+  else t += ' もっと速くしたらどうなるかな？';
+  setMsg('💥', t);
+}
+
+/* ---------- こうしん ---------- */
+function update(dt){
+  const f = 1 - Math.exp(-dt * 4.5);
+  cam.cx += (camT.cx - cam.cx) * f; cam.cy += (camT.cy - cam.cy) * f; cam.ls += (camT.ls - cam.ls) * f;
+  view.yaw += wrap(viewT.yaw - view.yaw) * f; view.pitch += (viewT.pitch - view.pitch) * f; updateMV();
+  for(const p of puffs) p.t += dt / 0.9;
+  puffs = puffs.filter(p => p.t < 1);
+  if(!sim || sim.mode !== 'flying') return;
+
+  const total = Math.min(dt, 0.05) * timeScale;
+  const n = Math.max(1, Math.ceil(total / 0.002)), h = total / n;
+  for(let i = 0; i < n; i++){
+    step(sim, h); sim.t += h;
+    const r = Math.hypot(sim.x, sim.y), a = Math.atan2(sim.x, sim.y);
+    sim.total += wrap(a - sim.prevA); sim.prevA = a;
+    if(r <= 1){
+      sim.x /= r; sim.y /= r; sim.mode = 'landed'; sim.theta = sim.total;
+      sim.trail.push([sim.x, sim.y]);
+      const k = Math.max(0.03, 24 / V.s);
+      addPuffs(sim.x, sim.y, 1, 8, 24 / V.s);
+      landMessage();
+      return;
+    }
+    if(r > 12){ sim.mode = 'gone'; return; }
+    if(i % 4 === 0) sim.trail.push([sim.x, sim.y]);
+  }
+  if(sim.trail.length > 4500) sim.trail.splice(0, sim.trail.length - 4500);
+
+  const laps = Math.floor(sim.total / PI2);
+  if(laps > sim.laps){ sim.laps = laps; setBadge(laps); }
+  if(!sim.shown && (sim.kind === 'circle' || sim.kind === 'ellipse') && sim.total > 1.2){
+    sim.shown = true;
+    if(sim.kind === 'circle')
+      setMsg('🛰️', 'ぴったり！ボールは<b>落ち続けて</b>いるのに、地球が丸いからぶつからない。このままずっと<b>ぐるぐる</b>回るよ。宇宙ステーションもこうなんだ。（本当は1周約84分！）');
+    else
+      setMsg('🛰️', '<b>地球を一周！</b>卵の形で回るよ。地球から遠いところではゆっくり、近いところでは速くなるんだ。');
+  }
+}
+
+/* ---------- えがく ---------- */
+const toScreen = (x, y) => { const p = proj2(x, y); return [V.vcx + V.s * (p[0] - V.ccx), V.vcy - V.s * (p[1] - V.ccy), p[2]]; };
+
+function drawArrow(x0, y0, dx, dy, len, color, label){
+  const m = Math.hypot(dx, dy) || 1, ux = dx / m, uy = dy / m;
+  const x1 = x0 + ux * len, y1 = y0 + uy * len;
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1 + ux*10, y1 + uy*10);
+  ctx.lineTo(x1 - ux*4 - uy*8, y1 - uy*4 + ux*8); ctx.lineTo(x1 - ux*4 + uy*8, y1 - uy*4 - ux*8); ctx.closePath(); ctx.fill();
+  const lx = Math.max(6, Math.min(W - 70, x1 + ux*18 - (ux < -.3 ? 50 : 0)));
+  label2(label, lx, y1 + uy*18 + 5, color);
+}
+function label2(text, x, y, color, size){
+  ctx.font = `700 ${size || 15}px "Hiragino Maru Gothic ProN",system-ui,sans-serif`;
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,20,.8)'; ctx.lineJoin = 'round';
+  ctx.strokeText(text, x, y); ctx.fillStyle = color || '#fff'; ctx.fillText(text, x, y);
+}
+
+function drawCannon(k, pc){
+  ctx.save(); ctx.translate(pc[0], pc[1]); ctx.scale(k, k);
+  ctx.fillStyle = '#2b3340';
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-1.1, -.28, 1.2, .56, .2) : ctx.rect(-1.1, -.28, 1.2, .56); ctx.fill();
+  ctx.fillStyle = '#434d5e'; ctx.fillRect(-.02, -.34, .14, .68);
+  ctx.fillStyle = '#7a4a1e'; ctx.beginPath(); ctx.arc(-.5, -.42, .42, 0, PI2); ctx.fill();
+  ctx.fillStyle = '#b9772f'; ctx.beginPath(); ctx.arc(-.5, -.42, .16, 0, PI2); ctx.fill();
+  ctx.restore();
+}
+function drawBall(x, y, k){
+  const rb = Math.max(0.008, 6 / V.s);
+  const g = ctx.createRadialGradient(x, y, 0, x, y, rb * 3);
+  g.addColorStop(0, 'rgba(255,200,80,.9)'); g.addColorStop(1, 'rgba(255,140,0,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rb * 3, 0, PI2); ctx.fill();
+  const g2 = ctx.createRadialGradient(x - rb*.3, y + rb*.3, rb*.1, x, y, rb);
+  g2.addColorStop(0, '#fff6c8'); g2.addColorStop(.5, '#ffb02e'); g2.addColorStop(1, '#e06a00');
+  ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(x, y, rb, 0, PI2); ctx.fill();
+}
+
+function render(){
+  const s = Math.exp(cam.ls), vp = viewport();
+  const cc = proj2(cam.cx, cam.cy);
+  V = {s, vcx: W / 2, vcy: (vp.top + vp.bot) / 2, ccx: cc[0] + panX, ccy: cc[1] + panY};
+  const tm = performance.now() / 1000;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#02040f'); bg.addColorStop(1, '#0c1a48');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  for(const st of stars){
+    ctx.globalAlpha = .45 + .45 * Math.sin(tm * 1.5 + st.p);
+    ctx.fillStyle = '#fff'; ctx.fillRect(st.x * W, st.y * H, st.r, st.r);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.setTransform(dpr*s, 0, 0, -dpr*s, dpr*(V.vcx - s*V.ccx), dpr*(V.vcy + s*V.ccy));
+  const px = 1 / s;
+
+  // くうき
+  let g = ctx.createRadialGradient(0, 0, .97, 0, 0, 1.09);
+  g.addColorStop(0, 'rgba(120,190,255,.7)'); g.addColorStop(1, 'rgba(120,190,255,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1.09, 0, PI2); ctx.fill();
+
+  // ちきゅう
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, 1, 0, PI2); ctx.clip();
+  g = ctx.createRadialGradient(-.3, .45, .05, 0, 0, 1.1);
+  g.addColorStop(0, '#46b0ff'); g.addColorStop(1, '#0a3f95');
+  ctx.fillStyle = g; ctx.fillRect(-1.1, -1.1, 2.2, 2.2);
+  ctx.lineWidth = 2 * px; ctx.strokeStyle = '#2f8f3f';
+  ctx.lineJoin = 'round';
+  for(const l of lands){ const pp = projectLand(l); if(!pp) continue; blobPath(pp); ctx.fillStyle = l.color; ctx.fill(); ctx.strokeStyle = l.color === '#62c35c' ? '#2f8f3f' : '#b9c6d6'; ctx.stroke(); }
+  g = ctx.createRadialGradient(.35, -.45, .5, 0, 0, 1.05);   // かげ
+  g.addColorStop(0, 'rgba(0,0,30,0)'); g.addColorStop(1, 'rgba(0,0,30,.4)');
+  ctx.fillStyle = g; ctx.fillRect(-1.1, -1.1, 2.2, 2.2);
+  ctx.restore();
+
+  // やま と 大砲（見る かくどが かわると ひょうじを うすく する）
+  const k = Math.max(0.03, 24 / s);
+  const pc = proj2(0, R0), cannonVisible = !hiddenBack(pc);
+  if(cannonVisible){
+    const ang = Math.max(Math.abs(wrap(view.yaw)), Math.abs(view.pitch));
+    const ma = Math.max(0, Math.min(1, 1 - (ang - 0.15) / 0.3));
+    const apex = R0 - 0.3 * k;
+    if(apex > 1.002 && ma > 0){
+      ctx.save(); ctx.globalAlpha = ma; ctx.translate(pc[0], pc[1] - R0);
+      const gy = x => Math.sqrt(1 - x*x), bw = 0.1;
+      ctx.fillStyle = '#8b7a6a'; ctx.beginPath();
+      ctx.moveTo(-bw, gy(bw) - .004); ctx.lineTo(0, apex); ctx.lineTo(bw, gy(bw) - .004); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f5f5f5'; ctx.beginPath();
+      const sw = (apex - gy(bw)) * .28 * bw / (apex - gy(bw) + 1e-9);
+      ctx.moveTo(-sw, apex - (apex - 1) * .28); ctx.lineTo(0, apex); ctx.lineTo(sw, apex - (apex - 1) * .28); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+    drawCannon(k, pc);
+  }
+
+  // 3Dの せんを かく（ちきゅうの うらに かくれた ぶぶんは かかない）
+  const strokePath3 = (pts, last) => {
+    ctx.beginPath(); let prev = null, run = false;
+    const n = pts.length + (last ? 1 : 0);
+    for(let i = 0; i < n; i++){
+      const q = i < pts.length ? pts[i] : last;
+      const p = proj2(q[0], q[1]);
+      if(prev){
+        if(!hiddenBack([(p[0]+prev[0])/2, (p[1]+prev[1])/2, (p[2]+prev[2])/2])){
+          if(!run){ ctx.moveTo(prev[0], prev[1]); run = true; }
+          ctx.lineTo(p[0], p[1]);
+        } else run = false;
+      }
+      prev = p;
+    }
+    ctx.stroke();
+  };
+
+  // よそうの せん
+  if(showPred && pv.pts.length > 1){
+    ctx.setLineDash([7 * px, 9 * px]); ctx.lineWidth = 2.2 * px; ctx.strokeStyle = 'rgba(255,255,255,.4)';
+    strokePath3(pv.pts);
+    ctx.setLineDash([]);
+  }
+
+  // あしあと
+  if(sim && sim.trail.length > 1){
+    ctx.lineWidth = 3.5 * px; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,170,40,.95)';
+    strokePath3(sim.trail, sim.mode === 'flying' ? [sim.x, sim.y] : null);
+  }
+
+  // ボール
+  const drawBall3 = (x, y) => {
+    const p = proj2(x, y);
+    ctx.globalAlpha = hiddenBack(p) ? .3 : 1; drawBall(p[0], p[1], k); ctx.globalAlpha = 1;
+  };
+  if(!sim) drawBall3(0.02 * k, R0);
+  else if(sim.mode !== 'gone') drawBall3(sim.x, sim.y);
+
+  // けむり
+  for(const p of puffs){
+    if(p.t < 0) continue;
+    const pp = proj2(p.x, p.y);
+    if(hiddenBack(pp)) continue;
+    ctx.fillStyle = `rgba(235,235,235,${(1 - p.t) * .5})`;
+    ctx.beginPath(); ctx.arc(pp[0] + p.dr * p.t * px, pp[1] + p.t * 8 * px, (3 + p.t * 9) * px * p.k, 0, PI2); ctx.fill();
+  }
+
+  // ---- がめん ざひょう ----
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.textAlign = 'center';
+  if(!sim && cannonVisible){
+    const [sx, sy] = toScreen(0, R0), bob = Math.sin(tm * 3) * 4;
+    label2('ここから投げるよ', sx, sy - 44 + bob, '#ffe28a', 16);
+    ctx.fillStyle = '#ffe28a'; ctx.beginPath();
+    ctx.moveTo(sx, sy - 24 + bob); ctx.lineTo(sx - 8, sy - 36 + bob); ctx.lineTo(sx + 8, sy - 36 + bob); ctx.fill();
+  }
+  if(sim && sim.mode === 'landed'){
+    const [sx, sy] = toScreen(sim.x, sim.y);
+    label2('ドスン！' + Math.round(sim.theta * R_KM).toLocaleString('ja-JP') + ' km', Math.max(80, Math.min(W - 80, sx)), sy - 30, '#ffe28a', 17);
+  }
+  if(sim && sim.mode === 'flying' && showArrow){
+    const [sx, sy, sz] = toScreen(sim.x, sim.y);
+    const wx = (sx - V.vcx) / V.s + V.ccx, wy = V.ccy - (sy - V.vcy) / V.s;
+    if(!hiddenBack([wx, wy, sz]) && sx > -50 && sx < W + 50 && sy > -50 && sy < H + 50){
+      const r2 = sim.x*sim.x + sim.y*sim.y, sp = Math.hypot(sim.vx, sim.vy);
+      ctx.textAlign = 'left';
+      const dv = dir2(sim.vx, sim.vy), dg = dir2(-sim.x, -sim.y);
+      const rv = Math.hypot(dv[0], dv[1]) / (sp || 1), rg = Math.hypot(dg[0], dg[1]) / Math.sqrt(r2);
+      if(rv > .08) drawArrow(sx, sy, dv[0], -dv[1], (24 + 34 * Math.min(sp, 1.6)) * Math.max(rv, .35), '#5df08a', '進む');
+      if(rg > .08) drawArrow(sx, sy, dg[0], -dg[1], (22 + 28 / r2) * Math.max(rg, .35), '#ff6b81', '引っぱる');
+    }
+  }
+  ctx.textAlign = 'start';
+}
+
+let lastT = performance.now();
+function frame(now){
+  const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+  update(dt); render();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- そうさ ---------- */
+const chips = [[1,'ふつうに投げる'],[3,'遠くへ'],[6,'もっと速く！'],[7.9,'ぐるっと一周！'],[9,'卵の形'],[11.5,'宇宙へ']];
+chips.forEach(([v, name]) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = name;
+  b.onclick = () => { $('speed').value = v; onSpeedChange(); setTimeout(throwBall, 250); };
+  $('chips').appendChild(b);
+});
+$('speed').addEventListener('input', onSpeedChange);
+$('go').onclick = throwBall;
+$('again').onclick = resetSim;
+$('tglPred').onclick = e => { showPred = !showPred; e.currentTarget.classList.toggle('on', showPred); };
+$('tglArrow').onclick = e => { showArrow = !showArrow; e.currentTarget.classList.toggle('on', showArrow); };
+$('tglSpd').onclick = e => {
+  timeScale = timeScale === 1 ? 2 : timeScale === 2 ? 0.4 : 1;
+  e.currentTarget.textContent = '⏱ ×' + timeScale;
+};
+$('whyBtn').onclick = () => $('why').classList.add('show');
+$('whyClose').onclick = () => $('why').classList.remove('show');
+addEventListener('keydown', e => { if(e.code === 'Enter' || (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON')){ e.preventDefault(); throwBall(); } });
+
+/* 見る かくどを かえる（ドラッグ）・ズーム・いどう */
+const ptrs = new Map(); let pinch0 = 0, zoom0 = 1, lastMid = null, panMode = false;
+const clampPitch = v => Math.max(-1.5, Math.min(1.5, v));
+function setZoom(z){ userZoom = Math.max(0.3, Math.min(5, z)); fitCamera(false); }
+function panBy(dx, dy){ const k = Math.exp(cam.ls); panX -= dx / k; panY += dy / k; }
+function setView(yaw, pitch){ viewT.yaw = yaw; viewT.pitch = pitch; }
+const midOf = () => { const [a, b] = [...ptrs.values()]; return {x: (a.x+b.x)/2, y: (a.y+b.y)/2, d: Math.hypot(a.x-b.x, a.y-b.y)}; };
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if(ptrs.size === 2){ const m = midOf(); pinch0 = m.d; zoom0 = userZoom; lastMid = m; }
+  cv.style.cursor = 'grabbing';
+});
+cv.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId); if(!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  if(ptrs.size === 1){
+    if(panMode || e.shiftKey || (e.buttons & 2)) panBy(dx, dy);
+    else {
+      view.yaw += dx * 0.008; view.pitch = clampPitch(view.pitch + dy * 0.008);
+      viewT.yaw = view.yaw; viewT.pitch = view.pitch; updateMV();
+    }
+  } else if(ptrs.size === 2 && pinch0 > 0){
+    const m = midOf();
+    if(lastMid) panBy(m.x - lastMid.x, m.y - lastMid.y);
+    lastMid = m; setZoom(zoom0 * m.d / pinch0);
+  }
+});
+const endPtr = e => { ptrs.delete(e.pointerId); pinch0 = 0; lastMid = null; if(!ptrs.size) cv.style.cursor = 'grab'; };
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', e => { e.preventDefault(); setZoom(userZoom * Math.exp(-e.deltaY * 0.0015)); }, {passive: false});
+$('zin').onclick = () => setZoom(userZoom * 1.3);
+$('zout').onclick = () => setZoom(userZoom / 1.3);
+$('zreset').onclick = () => { panX = panY = 0; setView(0, 0); setZoom(1); };
+$('zpan').onclick = e => { panMode = !panMode; e.currentTarget.classList.toggle('on', panMode); };
+$('vFront').onclick = () => setView(0, 0);
+$('vDiag').onclick = () => setView(-0.7, 0.5);
+$('vSide').onclick = () => setView(1.3, 0);
+$('vTop').onclick = () => setView(0, 1.3);
+
+updateReadout(); resetSim(); fitCamera(true);
+addEventListener('resize', () => fitCamera(true));
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
